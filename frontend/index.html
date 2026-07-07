@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>A股日线看盘</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { background: #1a1a2e; color: #eee; font-family: -apple-system, "Microsoft YaHei", sans-serif; }
+        .header {
+            display: flex; align-items: center; gap: 12px;
+            padding: 8px 16px; background: #16213e; border-bottom: 1px solid #0f3460;
+        }
+        .header h1 { font-size: 18px; white-space: nowrap; color: #e94560; }
+        .search-box { position: relative; flex: 1; max-width: 400px; }
+        .search-box input {
+            width: 100%; padding: 6px 12px; border: 1px solid #0f3460;
+            border-radius: 4px; background: #1a1a2e; color: #eee; font-size: 14px;
+        }
+        .search-box input:focus { outline: none; border-color: #e94560; }
+        .dropdown {
+            position: absolute; top: 100%; left: 0; right: 0; max-height: 300px;
+            overflow-y: auto; background: #16213e; border: 1px solid #0f3460;
+            border-radius: 0 0 4px 4px; display: none; z-index: 100;
+        }
+        .dropdown div {
+            padding: 8px 12px; cursor: pointer; font-size: 13px;
+            border-bottom: 1px solid #0f3460;
+        }
+        .dropdown div:hover { background: #0f3460; }
+        .dropdown .code { color: #e94560; margin-right: 8px; }
+        .stock-info { font-size: 14px; color: #aaa; white-space: nowrap; }
+        .stock-info .name { color: #eee; font-weight: bold; margin-right: 8px; }
+        .stock-info .price { font-weight: bold; }
+        .stock-info .up { color: #e94560; }
+        .stock-info .down { color: #0f9d58; }
+        #chart { width: 100%; height: calc(100vh - 50px); }
+        .loading { text-align: center; padding: 40px; color: #666; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📈 A股看盘</h1>
+        <div class="search-box">
+            <input type="text" id="search" placeholder="搜索股票名称或代码..." autocomplete="off">
+            <div class="dropdown" id="dropdown"></div>
+        </div>
+        <div class="stock-info" id="stockInfo"></div>
+    </div>
+    <div id="chart"></div>
+
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script>
+        let chart, candleSeries, volumeSeries, ma5Series, ma10Series, ma20Series;
+        let searchTimer;
+
+        // 初始化图表
+        function initChart() {
+            const chartElement = document.getElementById('chart');
+            chart = LightweightCharts.createChart(chartElement, {
+                layout: {
+                    background: { type: 'solid', color: '#1a1a2e' },
+                    textColor: '#aaa',
+                },
+                grid: {
+                    vertLines: { color: '#16213e' },
+                    horzLines: { color: '#16213e' },
+                },
+                crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+                rightPriceScale: { borderColor: '#0f3460' },
+                timeScale: { borderColor: '#0f3460', timeVisible: false },
+            });
+
+            candleSeries = chart.addCandlestickSeries({
+                upColor: '#e94560', downColor: '#0f9d58',
+                borderUpColor: '#e94560', borderDownColor: '#0f9d58',
+                wickUpColor: '#e94560', wickDownColor: '#0f9d58',
+            });
+
+            volumeSeries = chart.addHistogramSeries({
+                color: '#0f3460', priceFormat: { type: 'volume' },
+                priceScaleId: 'volume', scaleMargins: { top: 0.8, bottom: 0 },
+            });
+            chart.priceScale('volume').applyOptions({
+                scaleMargins: { top: 0.8, bottom: 0 },
+            });
+
+            ma5Series = chart.addLineSeries({ color: '#f5d142', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+            ma10Series = chart.addLineSeries({ color: '#a855f7', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+            ma20Series = chart.addLineSeries({ color: '#3b82f6', lineWidth: 1, priceLineVisible: false, lastValueVisible: false });
+
+            // 响应式
+            new ResizeObserver(entries => {
+                if (chart && entries.length) {
+                    chart.applyOptions({ width: entries[0].contentRect.width });
+                }
+            }).observe(chartElement);
+        }
+
+        // 格式化日期 20200102 → 2020-01-02
+        function formatDate(d) {
+            return d.substring(0, 4) + '-' + d.substring(4, 6) + '-' + d.substring(6, 8);
+        }
+
+        // 加载日线数据
+        async function loadDaily(tsCode, stockName) {
+            document.getElementById('stockInfo').innerHTML = `<span class="name">${stockName}</span> 加载中...`;
+            try {
+                const res = await fetch(`/api/daily?ts_code=${tsCode}`);
+                if (!res.ok) {
+                    const err = await res.json();
+                    document.getElementById('stockInfo').innerHTML = `<span class="name">${stockName}</span> <span class="down">错误: ${err.error}</span>`;
+                    return;
+                }
+                const data = await res.json();
+                if (!data.length) {
+                    document.getElementById('stockInfo').innerHTML = `<span class="name">${stockName}</span> 无数据`;
+                    return;
+                }
+
+                const candles = data.map(d => ({
+                    time: formatDate(d.date),
+                    open: d.open, high: d.high, low: d.low, close: d.close,
+                }));
+                const volumes = data.map(d => ({
+                    time: formatDate(d.date), value: d.vol,
+                    color: d.close >= d.open ? 'rgba(233,69,96,0.5)' : 'rgba(15,157,88,0.5)',
+                }));
+                const ma5 = data.map(d => ({ time: formatDate(d.date), value: d.ma5 })).filter(d => d.value !== null);
+                const ma10 = data.map(d => ({ time: formatDate(d.date), value: d.ma10 })).filter(d => d.value !== null);
+                const ma20 = data.map(d => ({ time: formatDate(d.date), value: d.ma20 })).filter(d => d.value !== null);
+
+                candleSeries.setData(candles);
+                volumeSeries.setData(volumes);
+                ma5Series.setData(ma5);
+                ma10Series.setData(ma10);
+                ma20Series.setData(ma20);
+
+                const last = data[data.length - 1];
+                const prev = data[data.length - 2];
+                const change = last.close - prev.close;
+                const pct = ((change / prev.close) * 100).toFixed(2);
+                const cls = change >= 0 ? 'up' : 'down';
+                const sign = change >= 0 ? '+' : '';
+                document.getElementById('stockInfo').innerHTML =
+                    `<span class="name">${stockName}</span>` +
+                    `<span class="price ${cls}">${last.close.toFixed(2)}</span>` +
+                    `<span class="${cls}">${sign}${change.toFixed(2)} (${sign}${pct}%)</span>`;
+
+                chart.timeScale().fitContent();
+            } catch (e) {
+                document.getElementById('stockInfo').innerHTML = `<span class="down">加载失败: ${e.message}</span>`;
+            }
+        }
+
+        // 搜索股票
+        async function searchStocks(q) {
+            const dropdown = document.getElementById('dropdown');
+            if (!q.trim()) { dropdown.style.display = 'none'; return; }
+            try {
+                const res = await fetch(`/api/stocks?q=${encodeURIComponent(q)}`);
+                const data = await res.json();
+                if (!data.length) { dropdown.style.display = 'none'; return; }
+                dropdown.innerHTML = data.map(s =>
+                    `<div onclick="selectStock('${s.ts_code}','${s.name}')">` +
+                    `<span class="code">${s.ts_code}</span>${s.name}</div>`
+                ).join('');
+                dropdown.style.display = 'block';
+            } catch (e) { dropdown.style.display = 'none'; }
+        }
+
+        function selectStock(tsCode, name) {
+            document.getElementById('search').value = '';
+            document.getElementById('dropdown').style.display = 'none';
+            loadDaily(tsCode, name);
+        }
+
+        // 事件绑定
+        document.getElementById('search').addEventListener('input', function(e) {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => searchStocks(e.target.value), 300);
+        });
+        document.addEventListener('click', (e) => {
+            if (!e.target.closest('.search-box')) {
+                document.getElementById('dropdown').style.display = 'none';
+            }
+        });
+
+        // 初始化
+        initChart();
+        // 默认加载平安银行
+        loadDaily('000001.SZ', '平安银行');
+    </script>
+</body>
+</html>
