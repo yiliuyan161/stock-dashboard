@@ -1,5 +1,5 @@
 workflow: full
-phase: open
+phase: build
 context_compression: off
 build_mode: null
 build_pause: null
@@ -9,7 +9,7 @@ isolation: null
 verify_mode: null
 auto_transition: true
 base_ref: null
-design_doc: null
+design_doc: openspec/changes/stock-dashboard-mvp/design.md
 plan: null
 verify_result: pending
 verification_report: null
@@ -17,3 +17,5 @@ branch_status: pending
 created_at: 2026-07-07
 verified_at: null
 archived: false
+handoff_context: openspec/changes/stock-dashboard-mvp/.comet/handoff/design-context.json
+handoff_hash: badec16afb6f62b22ae33c730ae7c4bcaf8afc524d27625b233bf0fdf750ba4b

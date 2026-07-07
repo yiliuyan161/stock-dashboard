@@ -1,0 +1,16 @@
+{
+  "change": "stock-dashboard-mvp",
+  "phase": "design",
+  "mode": "compact",
+  "canonical_spec": "openspec",
+  "generated_by": "comet-handoff.sh",
+  "context_hash": "badec16afb6f62b22ae33c730ae7c4bcaf8afc524d27625b233bf0fdf750ba4b",
+  "files": [
+    { "path": "openspec/changes/stock-dashboard-mvp/proposal.md", "sha256": "26f25a836578f61de671e6645ea4c6214a13ec0951cb1c4815aa081cb87b419e" },
+    { "path": "openspec/changes/stock-dashboard-mvp/design.md", "sha256": "6100166bb91d6dab6e49b9383f634f5ba4404d931e1e36690307d04e21ebb34e" },
+    { "path": "openspec/changes/stock-dashboard-mvp/tasks.md", "sha256": "643032f87c458da02a4e7748c251d28bb6589b10a8275d9ffdd631fc58ba182d" },
+    { "path": "openspec/changes/stock-dashboard-mvp/specs/chart-frontend/spec.md", "sha256": "d75b1fa1965fa4374cecbae1ad7dc2dff71dc7c3a1098fcb0c768baa1a9c277f" },
+    { "path": "openspec/changes/stock-dashboard-mvp/specs/daily-data-api/spec.md", "sha256": "ede8a670861232d8eadea98114002090c0f7b6b18ac681c14a6290ad380971e8" },
+    { "path": "openspec/changes/stock-dashboard-mvp/specs/docker-deploy/spec.md", "sha256": "19693c8c20eb4108f126a67ba1c9666c3d438dc1ebb9ca7431eebb746ee67f22" }
+  ]
+}

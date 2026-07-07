@@ -1,3 +1,9 @@
+---
+comet_change: stock-dashboard-mvp
+role: technical-design
+canonical_spec: openspec
+---
+
 ## Context
 
 全新项目，从零构建 A股日线看盘 Web 应用。现有基础设施：Traefik 反向代理 + frp 内网穿透 + Docker，域名 `*.test.icopy.site` 已配置。Tushare SDK v1.4.29 已安装，token 已存在于环境变量中。TradingView Lightweight Charts 通过 CDN 引入，无需 npm 依赖。
