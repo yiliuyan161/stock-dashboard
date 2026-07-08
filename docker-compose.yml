@@ -1,6 +1,8 @@
 services:
   stock-dashboard:
-    build: .
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
     container_name: stock-dashboard
     restart: unless-stopped
     environment:
@@ -8,8 +10,8 @@ services:
     ports:
       - "8000:8000"
     networks:
-      - traefik-external
+      - devnet
 
 networks:
-  traefik-external:
+  devnet:
     external: true

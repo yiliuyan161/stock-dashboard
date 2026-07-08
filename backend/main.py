@@ -15,7 +15,12 @@ if TUSHARE_TOKEN:
     ts.set_token(TUSHARE_TOKEN)
 pro = ts.pro_api() if TUSHARE_TOKEN else None
 
-FRONTEND_DIR = Path(__file__).parent.parent / "frontend"
+# frontend 目录：容器中 /app/frontend，本地开发 backend/../frontend
+_FRONTEND_CANDIDATES = [
+    Path(__file__).parent / "frontend",       # 容器: /app/frontend
+    Path(__file__).parent.parent / "frontend",  # 本地: ../frontend
+]
+FRONTEND_DIR = next((p for p in _FRONTEND_CANDIDATES if p.is_dir()), _FRONTEND_CANDIDATES[0])
 
 
 def calc_ma(closes: list[float], period: int) -> list[float | None]:
